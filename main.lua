@@ -26,10 +26,10 @@ function love.load()
     for x = 1, cellsInRow do
       board[x] = {}
     end
-    board[cellsInRow /2+1][cellsInRow /2]   = player1
-    board[cellsInRow /2][cellsInRow /2+1]   = player1
-    board[cellsInRow /2][cellsInRow /2]     = player2
-    board[cellsInRow /2+1][cellsInRow /2+1] = player2
+    board[cellsInRow/2+1][cellsInRow/2]   = player1
+    board[cellsInRow/2][cellsInRow/2+1]   = player1
+    board[cellsInRow/2][cellsInRow/2]     = player2
+    board[cellsInRow/2+1][cellsInRow/2+1] = player2
     scoreBoard = {}
     scoreBoard[player1] = 2
     scoreBoard[player2] = 2
