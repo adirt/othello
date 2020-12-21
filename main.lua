@@ -15,28 +15,35 @@ function love.load()
   tie     = 'tie'
 
   local font = 'font/DejaVuSans.ttf'
-  local fontSize = math.floor(screenHeight / 15)
+  local fontSize = math.floor(screenHeight / 10)
   love.graphics.setNewFont(font, fontSize)
 
   engToHeb = {
-    turn      = 'רות',
+    turn      = 'ךרות',
     score     = 'דוקינ',
-    won       = '!חצינ',
+    won       = '!תחצינ',
+    lost      = 'תדספה',
     [player1] = 'רוחש',
     [player2] = 'ןבל',
     [tie]     = '!וקית'
   }
 
-  leftClick    = 1
-  rectanglePad = 2
-  circlePad    = 5
-  textPad      = 1.1 * screenHeight
+  boardPad     = (screenWidth - screenHeight) / 2
+  rectanglePad = screenHeight / 540
+  circlePad    = screenHeight / 216
+  -- textPad = {
+  --   [player1] = .05 * screenHeight,
+  --   [player2] = boardPad + 1.05 * screenHeight
+  -- }
+  textPad = {
+    [player1] = 0,
+    [player2] = boardPad + screenHeight
+  }
 
   colors = {
     black     = { 0,  0, 0 },
     white     = { 1,  1, 1 },
-    green     = { 0,  1, 0 },
-    darkgreen = { 0, .5, 0 }
+    green     = { 0, .5, 0 }
   }
 
   function reset()
@@ -52,18 +59,28 @@ function love.load()
     board[cellsInRow/2+1][cellsInRow/2+1] = player2
     scoreBoard = { [player1] = 2, [player2] = 2 }
     winner = nil
+    loser = nil
   end
 
   reset()
 end
 
+
 function love.draw()
+  -- draw background
+  love.graphics.setColor(unpack(colors.white))
+  love.graphics.rectangle('fill',
+      screenWidth - boardPad,
+      0,
+      boardPad,
+      screenHeight)
+
   -- draw board
-  love.graphics.setColor(unpack(colors.darkgreen))
+  love.graphics.setColor(unpack(colors.green))
   for x = 1, cellsInRow do
     for y = 1, cellsInRow do
       love.graphics.rectangle('fill',
-          (x - 1) * cellSize + rectanglePad,
+          boardPad + (x - 1) * cellSize + rectanglePad,
           (y - 1) * cellSize + rectanglePad,
           cellSize - 2 * rectanglePad,
           cellSize - 2 * rectanglePad)
@@ -76,7 +93,7 @@ function love.draw()
       if board[x][y] then
         love.graphics.setColor(unpack(colors[board[x][y]]))
         love.graphics.circle('fill',
-                             (x - 0.5) * cellSize,
+                             boardPad + (x - 0.5) * cellSize,
                              (y - 0.5) * cellSize,
                              cellSize / 2 - circlePad)
       end
@@ -84,28 +101,26 @@ function love.draw()
   end
 
   -- draw game text
+  local function printText(text, color, row, pad)
+    love.graphics.printf({ color, text }, pad, row * cellSize, boardPad, 'center')
+  end
+
   love.graphics.setColor(unpack(colors.white))
-
-  local function printText(text, color, row)
-    love.graphics.print({ color, text }, textPad, row * cellSize)
-  end
-
+  printText(engToHeb[currentPlayer], colors[otherPlayer], 2, textPad[currentPlayer])
+  printText(tostring(scoreBoard[currentPlayer]), colors[otherPlayer], 5, textPad[currentPlayer])
+  printText(engToHeb[otherPlayer], colors[currentPlayer], 2, textPad[otherPlayer])
+  printText(tostring(scoreBoard[otherPlayer]), colors[currentPlayer], 5, textPad[otherPlayer])
   if winner then
-    if winner ~= tie then
-      printText(string.format("%s %s", engToHeb.won, engToHeb[winner]), colors.white, 1)
-    else
-      printText(engToHeb.tie, colors.white, 1)
-    end
+    printText(engToHeb.won, colors[loser], 3, textPad[winner])
+    printText(engToHeb.lost, colors[winner], 3, textPad[loser])
   else
-    printText(string.format("%s %s", engToHeb[currentPlayer], engToHeb.turn), colors.green, 1)
+    printText(engToHeb.turn, colors[otherPlayer], 3, textPad[currentPlayer])
   end
-  printText(engToHeb.score, colors.green, 3)
-  printText(string.format("%d :%s", scoreBoard[player1], engToHeb[player1]), colors.green, 4)
-  printText(string.format("%d :%s", scoreBoard[player2], engToHeb[player2]), colors.green, 5)
 end
 
+
 function love.mousereleased(x, y, button, istouch, presses)
-  if button ~= leftClick then return end  -- only left clicks are registered
+  if button ~= 1 then return end  -- only left clicks are registered
   if winner then
     if presses == 2 then  -- double-left-click once game is over resets the game
       reset()
@@ -114,7 +129,7 @@ function love.mousereleased(x, y, button, istouch, presses)
   end
 
   -- map (x, y) click coordinates to (x, y) squares on the board
-  x = math.floor(x / cellSize) + 1
+  x = math.floor((x - boardPad) / cellSize) + 1
   y = math.floor(y / cellSize) + 1
   if not board[x] or board[x][y] then return end  -- click outside the board or on a disk does nothing
 
@@ -284,9 +299,9 @@ function love.mousereleased(x, y, button, istouch, presses)
       currentPlayer, otherPlayer = otherPlayer, currentPlayer  -- opponent can't move, back to active player
       if not legalMovesAvailable() then
         -- active player can't move either, game over
-        if     scoreBoard[player1] > scoreBoard[player2] then winner = player1
-        elseif scoreBoard[player2] > scoreBoard[player1] then winner = player2
-        else   winner = tie end
+        if     scoreBoard[player1] > scoreBoard[player2] then winner, loser = player1, player2
+        elseif scoreBoard[player2] > scoreBoard[player1] then winner, loser = player2, player1
+        else   winner, loser = tie, tie end
         print("Game over, result: "..winner)
       end
     end
