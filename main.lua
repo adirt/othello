@@ -5,60 +5,76 @@
 -----------------------------
 
 function love.load()
-  cellsInRow = 8
-  cellSize = love.graphics.getHeight() / cellsInRow
+  screenWidth  = love.graphics.getWidth()
+  screenHeight = love.graphics.getHeight()
+  cellsInRow   = 8
+  cellSize     = screenHeight / cellsInRow
+
   player1 = 'black'
   player2 = 'white'
-  tie = 'tie'
-  font = 'font/DejaVuSans.ttf'
-  fontSize = math.floor(love.graphics.getHeight() / 15)
+  tie     = 'tie'
+
+  local font = 'font/DejaVuSans.ttf'
+  local fontSize = math.floor(screenHeight / 15)
   love.graphics.setNewFont(font, fontSize)
 
-  engToHeb = { turn = 'רות', score = 'דוקינ', won = '!חצינ' }
-  engToHeb[player1] = 'רוחש'
-  engToHeb[player2] = 'ןבל'
-  engToHeb[tie] = '!וקית'
+  engToHeb = {
+    turn      = 'רות',
+    score     = 'דוקינ',
+    won       = '!חצינ',
+    [player1] = 'רוחש',
+    [player2] = 'ןבל',
+    [tie]     = '!וקית'
+  }
+
+  leftClick    = 1
+  rectanglePad = 2
+  circlePad    = 5
+  textPad      = 1.1 * screenHeight
+
+  colors = {
+    black     = { 0,  0, 0 },
+    white     = { 1,  1, 1 },
+    green     = { 0,  1, 0 },
+    darkgreen = { 0, .5, 0 }
+  }
 
   function reset()
     currentPlayer = player1
-    otherPlayer = player2
+    otherPlayer   = player2
     board = {}
     for x = 1, cellsInRow do
       board[x] = {}
     end
-    board[cellsInRow/2+1][cellsInRow/2]   = player1
-    board[cellsInRow/2][cellsInRow/2+1]   = player1
-    board[cellsInRow/2][cellsInRow/2]     = player2
+    board[cellsInRow/2+1][cellsInRow / 2] = player1
+    board[cellsInRow / 2][cellsInRow/2+1] = player1
+    board[cellsInRow / 2][cellsInRow / 2] = player2
     board[cellsInRow/2+1][cellsInRow/2+1] = player2
-    scoreBoard = {}
-    scoreBoard[player1] = 2
-    scoreBoard[player2] = 2
+    scoreBoard = { [player1] = 2, [player2] = 2 }
+    winner = nil
   end
 
   reset()
 end
 
 function love.draw()
-  local rectanglePad = 2
-  local circlePad = 5
-  local player1Color = { 0, 0, 0 }  -- black
-  local player2Color = { 1, 1, 1 }  -- white
-  local boardColor = { 0, .5, 0 }   -- dark green
-
+  -- draw board
+  love.graphics.setColor(unpack(colors.darkgreen))
   for x = 1, cellsInRow do
     for y = 1, cellsInRow do
-      love.graphics.setColor(unpack(boardColor))
       love.graphics.rectangle('fill',
-                              (x - 1) * cellSize + rectanglePad,
-                              (y - 1) * cellSize + rectanglePad,
-                              cellSize - 2 * rectanglePad,
-                              cellSize - 2 * rectanglePad)
+          (x - 1) * cellSize + rectanglePad,
+          (y - 1) * cellSize + rectanglePad,
+          cellSize - 2 * rectanglePad,
+          cellSize - 2 * rectanglePad)
+    end
+  end
+
+  -- draw disks
+  for x = 1, cellsInRow do
+    for y = 1, cellsInRow do
       if board[x][y] then
-        if board[x][y] == player1 then
-          love.graphics.setColor(unpack(player1Color))
-        elseif board[x][y] == player2 then
-          love.graphics.setColor(unpack(player2Color))
-        end
+        love.graphics.setColor(unpack(colors[board[x][y]]))
         love.graphics.circle('fill',
                              (x - 0.5) * cellSize,
                              (y - 0.5) * cellSize,
@@ -67,31 +83,40 @@ function love.draw()
     end
   end
 
-  local function printText(text, row)
-    love.graphics.print(text, love.graphics.getHeight() + 20, row * cellSize)
+  -- draw game text
+  love.graphics.setColor(unpack(colors.white))
+
+  local function printText(text, color, row)
+    love.graphics.print({ color, text }, textPad, row * cellSize)
   end
 
   if winner then
     if winner ~= tie then
-      printText(string.format("%s %s", engToHeb.won, engToHeb[winner]), 1)
+      printText(string.format("%s %s", engToHeb.won, engToHeb[winner]), colors.white, 1)
     else
-      printText(engToHeb.tie, 1)
+      printText(engToHeb.tie, colors.white, 1)
     end
   else
-    printText(string.format("%s %s", engToHeb[currentPlayer], engToHeb.turn), 1)
+    printText(string.format("%s %s", engToHeb[currentPlayer], engToHeb.turn), colors.green, 1)
   end
-  printText(engToHeb.score, 3)
-  printText(string.format("%d :%s", scoreBoard[player1], engToHeb[player1]), 4)
-  printText(string.format("%d :%s", scoreBoard[player2], engToHeb[player2]), 5)
+  printText(engToHeb.score, colors.green, 3)
+  printText(string.format("%d :%s", scoreBoard[player1], engToHeb[player1]), colors.green, 4)
+  printText(string.format("%d :%s", scoreBoard[player2], engToHeb[player2]), colors.green, 5)
 end
 
 function love.mousereleased(x, y, button, istouch, presses)
-  local leftClick = 1
-  if button ~= leftClick then return end
-  if winner then return end
+  if button ~= leftClick then return end  -- only left clicks are registered
+  if winner then
+    if presses == 2 then  -- double-left-click once game is over resets the game
+      reset()
+    end
+    return
+  end
+
+  -- map (x, y) click coordinates to (x, y) squares on the board
   x = math.floor(x / cellSize) + 1
   y = math.floor(y / cellSize) + 1
-  if board[x] and board[x][y] then return end
+  if not board[x] or board[x][y] then return end  -- click outside the board or on a disk does nothing
 
   function move(x, y, justCheck)
     local score = 0
@@ -233,13 +258,14 @@ function love.mousereleased(x, y, button, istouch, presses)
       scoreBoard[currentPlayer] = scoreBoard[currentPlayer] + score + 1
       scoreBoard[otherPlayer] = scoreBoard[otherPlayer] - score
     end
+
     return score > 0
   end
 
   local function legalMovesAvailable()
     for x = 1, cellsInRow do
       for y = 1, cellsInRow do
-        if not board[x][y] then  -- no continue statement :(
+        if not board[x][y] then
           local legalMove = move(x, y, true)
           if legalMove then return true end
         end
@@ -248,19 +274,21 @@ function love.mousereleased(x, y, button, istouch, presses)
     return false
   end
 
+  -- active player makes a move
   local flipped = move(x, y)
   log(x, y)
   if flipped then
-    currentPlayer, otherPlayer = otherPlayer, currentPlayer  -- swap to end turn
+    currentPlayer, otherPlayer = otherPlayer, currentPlayer    -- swap to end turn
     if not legalMovesAvailable() then
       print(currentPlayer.." can't move, back to "..otherPlayer)
       currentPlayer, otherPlayer = otherPlayer, currentPlayer  -- opponent can't move, back to active player
-    end
-    if not legalMovesAvailable() then
-      if     scoreBoard[player1] > scoreBoard[player2] then winner = player1
-      elseif scoreBoard[player2] > scoreBoard[player1] then winner = player2
-      else   winner = tie end
-      print("Game over, result: "..winner)
+      if not legalMovesAvailable() then
+        -- active player can't move either, game over
+        if     scoreBoard[player1] > scoreBoard[player2] then winner = player1
+        elseif scoreBoard[player2] > scoreBoard[player1] then winner = player2
+        else   winner = tie end
+        print("Game over, result: "..winner)
+      end
     end
   end
 end
