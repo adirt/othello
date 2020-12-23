@@ -31,24 +31,20 @@ function love.load()
   boardPad     = (screenWidth - screenHeight) / 2
   rectanglePad = screenHeight / 540
   circlePad    = screenHeight / 216
-  -- textPad = {
-  --   [player1] = .05 * screenHeight,
-  --   [player2] = boardPad + 1.05 * screenHeight
-  -- }
   textPad = {
     [player1] = 0,
     [player2] = boardPad + screenHeight
   }
 
   colors = {
-    black     = { 0,  0, 0 },
-    white     = { 1,  1, 1 },
-    green     = { 0, .5, 0 }
+    black = { 0,  0, 0 },
+    white = { 1,  1, 1 },
+    green = { 0, .5, 0 }
   }
 
   function reset()
     currentPlayer = player1
-    otherPlayer   = player2
+    otherPlayer = player2
     board = {}
     for x = 1, cellsInRow do
       board[x] = {}
@@ -101,20 +97,21 @@ function love.draw()
   end
 
   -- draw game text
-  local function printText(text, color, row, pad)
-    love.graphics.printf({ color, text }, pad, row * cellSize, boardPad, 'center')
+  local function printText(t)
+    local text, color, side, row = assert(t.text), assert(t.color), assert(t.side), assert(t.row)
+    love.graphics.printf({ colors[color], text }, textPad[side], row * cellSize, boardPad, 'center')
   end
 
   love.graphics.setColor(unpack(colors.white))
-  printText(engToHeb[currentPlayer], colors[otherPlayer], 2, textPad[currentPlayer])
-  printText(tostring(scoreBoard[currentPlayer]), colors[otherPlayer], 5, textPad[currentPlayer])
-  printText(engToHeb[otherPlayer], colors[currentPlayer], 2, textPad[otherPlayer])
-  printText(tostring(scoreBoard[otherPlayer]), colors[currentPlayer], 5, textPad[otherPlayer])
+  printText{ text = engToHeb[currentPlayer], color = otherPlayer, side = currentPlayer, row = 2 }
+  printText{ text = scoreBoard[currentPlayer], color = otherPlayer, side = currentPlayer, row = 5 }
+  printText{ text = engToHeb[otherPlayer], color = currentPlayer, side = otherPlayer, row = 2 }
+  printText{ text = scoreBoard[otherPlayer], color = currentPlayer, side = otherPlayer, row = 5 }
   if winner then
-    printText(engToHeb.won, colors[loser], 3, textPad[winner])
-    printText(engToHeb.lost, colors[winner], 3, textPad[loser])
+    printText{ text = engToHeb.won, color = loser, side = winner, row = 3 }
+    printText{ text = engToHeb.lost, color = winner, side = loser, row = 3 }
   else
-    printText(engToHeb.turn, colors[otherPlayer], 3, textPad[currentPlayer])
+    printText{ text = engToHeb.turn, color = otherPlayer, side = currentPlayer, row = 3 }
   end
 end
 
