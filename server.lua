@@ -1,3 +1,23 @@
+function runServer()
+  local enet = assert(require 'enet')
+  local host = enet.host_create 'localhost:9137'
+  while true do
+    local event = host:service(100)
+    while event do
+      if event.type == "receive" then
+        print("Got message: ", event.data, event.peer)
+        event.peer:send( "pong" )
+      elseif event.type == "connect" then
+        print(event.peer, "connected.")
+      elseif event.type == "disconnect" then
+        print(event.peer, "disconnected.")
+      end
+      event = host:service()
+    end
+  end
+end
+
+
 function main()
   local board = initSomeBoard()
   -- boardStr = getBoardString(board)
@@ -7,10 +27,20 @@ function main()
   -- 64 bit integer, need two of these since our encoding requires 128 bits
   -- why are the 4 lowest bit-pairs zeros instead of 01,10,00,10?
   local boardDecoded = decodeBoard(boardEncoded)
-  print(boardDecoded == board)
+  for x = 1, 8 do
+    for y = 1, 8 do
+      if board[x][y] ~= boardDecoded[x][y] then
+        print('mismatch in ['..x..']['..y..']')
+        return
+      end
+    end
+  end
+  print("The two boards match!")
   -- board2 = getBoard(boardStr)
   -- print(board == board2)
+  runServer()
 end
+
 
 function initSomeBoard()
   board = {}
@@ -31,6 +61,7 @@ function initSomeBoard()
   return board
 end
 
+
 function getBoardString(board)
   boardStr = ''
   for i = 1, 8 do
@@ -45,6 +76,7 @@ function getBoardString(board)
   end
   return boardStr
 end
+
 
 function getBoard(boardStr)
   board = {}
@@ -61,6 +93,7 @@ function getBoard(boardStr)
   end
   return board
 end
+
 
 function encodeBoard(board)
   local code = 0
@@ -86,21 +119,20 @@ function encodeBoard(board)
   return string.pack('i4i4i4i4', table.unpack(boardCodes))
 end
 
+
 function decodeBoard(boardEncoded)
   local boardDecoded = {}
   local boardCodes = table.pack(string.unpack('i4i4i4i4', boardEncoded))
   local code
-  local mask
   local map = { 'black', 'white' }
-  for x = 1, 8 do
-    if x % 2 == 1 then
-      code = boardCodes[math.ceil(x / 2)]
-      mask = 3 << 30
+  for x = 8, 1, -1 do
+    if x % 2 == 0 then
+      code = boardCodes[x/2]
     end
     boardDecoded[x] = {}
-    for y = 1, 8 do
-      boardDecoded[x][y] = map[code & mask]
-      mask = mask >> 2
+    for y = 8, 1, -1 do
+      boardDecoded[x][y] = map[code & 3]
+      code = code >> 2
     end
   end
   return boardDecoded
